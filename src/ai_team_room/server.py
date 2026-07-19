@@ -81,18 +81,18 @@ class RoomApp:
 
     def wait_state(self, meeting_id: str, after: int, timeout: float, participant: str | None = None) -> dict:
         deadline = time.monotonic() + min(max(timeout, 0), 30)
-        while True:
-            state = self.store.state(meeting_id, after)
-            if participant and state["meeting"] and state["meeting"]["next_speaker"] == participant:
-                state["event"] = "your_turn"
-                return state
-            if state["messages"] or not state["meeting"] or state["meeting"]["status"] != "active":
-                return state
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                state["event"] = "timeout"
-                return state
-            with self.changed:
+        with self.changed:
+            while True:
+                state = self.store.state(meeting_id, after)
+                if participant and state["meeting"] and state["meeting"]["next_speaker"] == participant:
+                    state["event"] = "your_turn"
+                    return state
+                if state["messages"] or not state["meeting"] or state["meeting"]["status"] != "active":
+                    return state
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    state["event"] = "timeout"
+                    return state
                 self.changed.wait(min(remaining, 5))
 
 

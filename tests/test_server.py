@@ -82,7 +82,7 @@ class ServerTests(unittest.TestCase):
             self.assertGreater(len(response.read()), 1_000)
 
     def test_end_wakes_waiter(self):
-        created = self.create(); meeting = created["meeting"]; token = created["invitations"]["claude"]
+        created = self.create(); meeting = created["meeting"]; token = created["invitations"]["codex"]
         initial = self.request("/api/state", token)[1]
         result = {}
         def wait(): result.update(self.request(f"/api/wait?after={initial['cursor']}&timeout=3", token)[1])
