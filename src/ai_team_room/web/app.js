@@ -29,7 +29,7 @@ const translations = {
     command:(name,command)=>`현재 실제 작업 세션에서 ${name} 참가자로 AI Team Room 회의에 참가하라. 이 세션의 기존 대화 맥락, 도구, 작업공간, 권한 경계를 그대로 유지하라. 다음 명령을 그대로 실행하라: ${command}. 반환된 참가 규약을 읽고 회의가 끝날 때까지 대기 → 조사/작업 → 발언 → 대기를 반복하라.`
   }
 };
-let language = localStorage.getItem('atr-language') || (navigator.language.toLowerCase().startsWith('ko') ? 'ko' : 'en');
+let language = localStorage.getItem('atr-language') || 'en';
 let current = null, invitations = {}, joinCommands = {}, lastCursor = 0;
 const $ = id => document.getElementById(id);
 const t = key => translations[language][key] ?? key;
@@ -49,6 +49,10 @@ async function api(path, options={}) {
 }
 async function copy(text, button) { await navigator.clipboard.writeText(text); const old=button.textContent; button.textContent=t('copied'); setTimeout(()=>button.textContent=old,900); }
 let lastResult={meeting:null,messages:[],presence:[],cursor:0};
+const AUTO_SCROLL_THRESHOLD=80;
+function isNearMessageBottom(container){
+  return container.scrollHeight-container.scrollTop-container.clientHeight<=AUTO_SCROLL_THRESHOLD;
+}
 function render(result) {
   lastResult=result; if(result.invitations) invitations=result.invitations; if(result.join_commands) joinCommands=result.join_commands; current=result.meeting;
   const open=current && current.status!=='ended';
@@ -65,14 +69,18 @@ function render(result) {
   document.querySelectorAll('[data-copy]').forEach(button=>button.onclick=()=>copy(t('command')(button.dataset.copy,joinCommands[button.dataset.copy]),button));
   const messages=result.messages||[];
   if(messages.length || lastCursor===0){
-    const container=$('messages'); if(lastCursor===0) container.innerHTML='';
+    const container=$('messages');
+    const initialLoad=lastCursor===0;
+    const followNewest=initialLoad||isNearMessageBottom(container);
+    if(initialLoad) container.innerHTML='';
     for(const m of messages){
       if(container.querySelector(`[data-message="${m.id}"]`)) continue;
       const node=document.createElement('article'); node.className=`message ${m.sender}`; node.dataset.message=m.id;
       node.innerHTML=`<div class="meta">${esc(m.sender)} → ${esc(m.recipient==='all'?t('everyone'):m.recipient)} · ${esc(m.kind)} · ${new Date(m.created_at).toLocaleTimeString(language)}</div><div class="bubble">${esc(m.text)}</div>`;
       container.appendChild(node);
     }
-    lastCursor=Math.max(lastCursor,result.cursor||0); container.scrollTop=container.scrollHeight;
+    lastCursor=Math.max(lastCursor,result.cursor||0);
+    if(followNewest) container.scrollTop=container.scrollHeight;
   }
 }
 async function refresh(){try{render(await api('/api/state'));}catch(e){$('state').textContent=e.message;}}
