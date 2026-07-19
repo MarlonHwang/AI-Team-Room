@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-team-room"
+version = "0.1.0"
+description = "A local meeting room for AI coding sessions you already have open"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Madoros Studio" }]
+keywords = ["ai", "coding-agent", "claude-code", "codex", "collaboration"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = []
+
+[project.scripts]
+ai-team-room = "ai_team_room.server:main"
+aitr = "ai_team_room.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/madoros/ai-team-room"
+Issues = "https://github.com/madoros/ai-team-room/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ai_team_room = ["web/*.html", "web/*.js", "web/*.png"]

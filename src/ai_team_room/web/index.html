@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Team Room</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#2f81f7;--human:#3fb950}
+    *{box-sizing:border-box}html,body{height:100%;overflow:hidden}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}button,input,textarea,select{font:inherit}
+    header{height:92px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px}.brand{display:flex;align-items:center;gap:14px}.brand img{width:78px;height:78px;object-fit:contain}.brand h1{font-size:20px;margin:0}button{background:#21262d;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:8px 12px;cursor:pointer}button.primary{background:#238636;border-color:#2ea043}button.danger{color:#ff7b72}button:disabled{opacity:.45}
+    main{display:grid;grid-template-columns:280px minmax(0,1fr);height:calc(100vh - 92px);min-height:0;overflow:hidden}aside{height:100%;border-right:1px solid var(--line);padding:20px;overflow:auto}.room{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+    .topic{padding:18px 24px;border-bottom:1px solid var(--line)}.topic h2{font-size:17px;margin:0 0 5px}.muted{color:var(--muted)}.status{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px}
+    #messages{flex:1;min-height:0;overflow:auto;padding:24px}.message{max-width:760px;margin:0 auto 18px}.message .meta{color:var(--muted);font-size:12px;margin-bottom:4px}.bubble{white-space:pre-wrap;background:#211a33;border:1px solid #6e40c9;border-radius:9px;padding:12px 14px}.message.human .bubble{background:#102a4c;border-color:#2f81f7}.message.claude .bubble{background:#3a2312;border-color:#f0883e}.message.codex .bubble{background:#12351f;border-color:#3fb950}
+    footer{border-top:1px solid var(--line);padding:14px 24px}.compose{display:flex;gap:9px;max-width:860px;margin:auto}.compose textarea{flex:1;min-height:58px;resize:vertical;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px}
+    label{display:block;color:var(--muted);font-size:12px;margin:13px 0 5px}input,select,textarea{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:8px}.stack{display:grid;gap:8px}.card{border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0}.invite{word-break:break-all;font:12px/1.4 ui-monospace,monospace}.error{color:#ff7b72;margin-top:8px}.presence{margin:8px 0}.presence b{color:#58a6ff}@media(max-width:760px){main{grid-template-columns:1fr}aside{display:none}}
+    .help-button{width:36px;height:36px;padding:0;border-radius:50%;font-size:18px;font-weight:700;margin-right:8px}dialog{width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;box-shadow:0 24px 80px #000a}dialog::backdrop{background:#000a}.help-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:16px 20px}.help-head h2{margin:0;font-size:19px}.help-body{padding:18px 22px}.help-body ol{padding-left:22px}.help-body li{margin:9px 0}.about{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+<header><div class="brand"><img src="/madoro-studio-logo.png" alt="Madoro Studio"><h1>AI Team Room</h1></div><div><button id="help" class="help-button" aria-label="Help">?</button><select id="language" aria-label="Language" style="display:inline-block;width:auto;margin-right:8px"><option value="ko">한국어</option><option value="en">English</option></select><button id="pause" data-i18n="pause">Pause</button> <button id="end" class="danger" data-i18n="endMeeting">End meeting</button></div></header>
+<main>
+  <aside>
+    <section id="create">
+      <h2 data-i18n="newMeeting">New meeting</h2>
+      <label data-i18n="topicLabel">Topic</label><textarea id="new-topic"></textarea>
+      <label data-i18n="participantsLabel">Participants (comma separated)</label><input id="new-participants" value="claude,codex">
+      <label data-i18n="firstSpeaker">First speaker</label><input id="new-first" value="claude">
+      <label data-i18n="maxTurns">Maximum AI turns</label><input id="new-max" type="number" min="1" max="100" value="20">
+      <button id="start" class="primary" data-i18n="startMeeting">Start meeting</button><div id="create-error" class="error"></div>
+    </section>
+    <section id="controls" hidden>
+      <h3 data-i18n="participantsHeading">Participants</h3><div id="presence"></div>
+      <label data-i18n="passTo">Pass next turn to</label><div class="stack"><select id="next"></select><button id="pass" data-i18n="passTurn">Pass turn</button></div>
+      <h3 data-i18n="joinInstructions">Join instructions</h3><div id="invites"></div>
+      <p class="muted" data-i18n="inviteHelp">Paste one instruction into each already-open AI session. Tokens grant access only to that participant in this meeting.</p>
+    </section>
+  </aside>
+  <section class="room">
+    <div class="topic"><h2 id="topic" data-i18n="noMeeting">No meeting yet</h2><div id="state" class="muted"></div></div>
+    <div id="messages"><p class="muted" data-i18n="createHint">Create a meeting to begin.</p></div>
+    <footer id="composer"><div class="compose"><select id="recipient" style="width:130px"><option value="all" data-i18n="everyone">Everyone</option></select><textarea id="text"></textarea><button id="send" class="primary" data-i18n="send">Send</button></div><div id="send-error" class="error"></div></footer>
+  </section>
+</main>
+<dialog id="help-dialog"><div class="help-head"><h2 id="help-title"></h2><button id="help-close" aria-label="Close">×</button></div><div id="help-body" class="help-body"></div></dialog>
+<script src="/app.js"></script>
+</body>
+</html>
