@@ -18,8 +18,10 @@ model providers, operating systems, or services that a user chooses to connect.
 Their own privacy policies apply to those products.
 
 Meeting records remain under the user's control and can be removed by deleting
-the local AI Team Room data directory. See [SECURITY.md](SECURITY.md) for the
-security model and known limitations.
+the local AI Team Room data directory. The participant CLI also stores only its
+latest numeric delivery cursor in a local file named with a one-way hash of the
+room URL and participant token; it does not store the token itself. See
+[SECURITY.md](SECURITY.md) for the security model and known limitations.
 
 Questions about this policy may be submitted through the repository's GitHub
 issue tracker. Do not include private meeting content, access tokens, or other

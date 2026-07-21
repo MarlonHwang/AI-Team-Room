@@ -132,6 +132,32 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result["event"], "your_turn")
         self.assertEqual(result["you"], "claude")
 
+    def test_participant_leave_clears_presence(self):
+        created = self.create(); meeting = created["meeting"]; token = created["invitations"]["claude"]
+        self.request("/api/state", token)
+        self.assertEqual(
+            [item["participant"] for item in self.app.store.presence(meeting["id"])],
+            ["claude"],
+        )
+        _, result = self.request("/api/leave", token, "POST", {})
+        self.assertEqual(result["left"], "claude")
+        self.assertEqual(self.app.store.presence(meeting["id"]), [])
+
+    def test_direct_human_message_assigns_floor_and_pass_control_is_removed(self):
+        created = self.create(); meeting = created["meeting"]
+        self.request("/api/messages", self.control, "POST", {
+            "meeting_id": meeting["id"], "text": "Codex, inspect this",
+            "recipient": "codex", "client_id": "assign-codex",
+        })
+        _, state = self.request("/api/state", self.control)
+        self.assertEqual(state["meeting"]["next_speaker"], "codex")
+        self.assertEqual(state["meeting"]["turn_count"], 0)
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/control", self.control, "POST", {
+                "meeting_id": meeting["id"], "action": "pass",
+            })
+        self.assertEqual(caught.exception.code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()

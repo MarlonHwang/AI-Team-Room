@@ -12,7 +12,7 @@
     .topic{padding:18px 24px;border-bottom:1px solid var(--line)}.topic h2{font-size:17px;margin:0 0 5px}.muted{color:var(--muted)}.status{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px}
     #messages{flex:1;min-height:0;overflow:auto;padding:24px}.message{max-width:760px;margin:0 auto 18px}.message .meta{color:var(--muted);font-size:12px;margin-bottom:4px}.bubble{white-space:pre-wrap;background:#211a33;border:1px solid #6e40c9;border-radius:9px;padding:12px 14px}.message.human .bubble{background:#102a4c;border-color:#2f81f7}.message.claude .bubble{background:#3a2312;border-color:#f0883e}.message.codex .bubble{background:#12351f;border-color:#3fb950}
     footer{border-top:1px solid var(--line);padding:14px 24px}.compose{display:flex;gap:9px;max-width:860px;margin:auto}.compose textarea{flex:1;min-height:58px;resize:vertical;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px}
-    label{display:block;color:var(--muted);font-size:12px;margin:13px 0 5px}input,select,textarea{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:8px}.stack{display:grid;gap:8px}.card{border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0}.invite{word-break:break-all;font:12px/1.4 ui-monospace,monospace}.error{color:#ff7b72;margin-top:8px}.presence{margin:8px 0}.presence b{color:#58a6ff}@media(max-width:760px){main{grid-template-columns:1fr}aside{display:none}}
+    label{display:block;color:var(--muted);font-size:12px;margin:13px 0 5px}input,select,textarea{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:8px}.card{border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0}.invite{word-break:break-all;font:12px/1.4 ui-monospace,monospace}.error{color:#ff7b72;margin-top:8px}.notice{color:#3fb950;margin-top:8px}.presence{margin:8px 0}.presence b{color:#58a6ff}@media(max-width:760px){main{grid-template-columns:1fr}aside{display:none}}
     .help-button{width:36px;height:36px;padding:0;border-radius:50%;font-size:18px;font-weight:700;margin-right:8px}dialog{width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;box-shadow:0 24px 80px #000a}dialog::backdrop{background:#000a}.help-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:16px 20px}.help-head h2{margin:0;font-size:19px}.help-body{padding:18px 22px}.help-body ol{padding-left:22px}.help-body li{margin:9px 0}.about{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
   </style>
 </head>
@@ -30,15 +30,15 @@
     </section>
     <section id="controls" hidden>
       <h3 data-i18n="participantsHeading">Participants</h3><div id="presence"></div>
-      <label data-i18n="passTo">Pass next turn to</label><div class="stack"><select id="next"></select><button id="pass" data-i18n="passTurn">Pass turn</button></div>
       <h3 data-i18n="joinInstructions">Join instructions</h3><div id="invites"></div>
       <p class="muted" data-i18n="inviteHelp">Paste one instruction into each already-open AI session. Tokens grant access only to that participant in this meeting.</p>
+      <div id="control-error" class="error"></div>
     </section>
   </aside>
   <section class="room">
     <div class="topic"><h2 id="topic" data-i18n="noMeeting">No meeting yet</h2><div id="state" class="muted"></div></div>
     <div id="messages"><p class="muted" data-i18n="createHint">Create a meeting to begin.</p></div>
-    <footer id="composer"><div class="compose"><select id="recipient" style="width:130px"><option value="all" data-i18n="everyone">Everyone</option></select><textarea id="text"></textarea><button id="send" class="primary" data-i18n="send">Send</button></div><div id="send-error" class="error"></div></footer>
+    <footer id="composer"><div class="compose"><select id="recipient" style="width:130px"><option value="all" data-i18n="everyone">Everyone</option></select><textarea id="text"></textarea><button id="send" class="primary" data-i18n="send">Send</button></div><div id="send-status" class="notice"></div><div id="send-error" class="error"></div></footer>
   </section>
 </main>
 <dialog id="help-dialog"><div class="help-head"><h2 id="help-title"></h2><button id="help-close" aria-label="Close">×</button></div><div id="help-body" class="help-body"></div></dialog>

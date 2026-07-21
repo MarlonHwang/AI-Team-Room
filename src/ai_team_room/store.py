@@ -144,6 +144,16 @@ class RoomStore:
                 (meeting_id, participant, utc_now()),
             )
 
+    def leave(self, meeting_id: str, participant: str) -> None:
+        meeting = self.get(meeting_id)
+        if not meeting or participant not in meeting["participants"]:
+            raise ValueError("participant is not invited to this meeting")
+        with self.connect() as db:
+            db.execute(
+                "DELETE FROM presence WHERE meeting_id=? AND participant=?",
+                (meeting_id, participant),
+            )
+
     def send(self, meeting_id: str, sender: str, recipient: str, kind: str, text: str, client_id: str | None) -> tuple[dict, bool]:
         if not all(isinstance(value, str) for value in (meeting_id, sender, recipient, kind, text)):
             raise ValueError("meeting, sender, recipient, kind, and text must be strings")
@@ -183,7 +193,15 @@ class RoomStore:
                 "INSERT INTO messages(meeting_id,sender,recipient,kind,text,client_id,created_at) VALUES(?,?,?,?,?,?,?)",
                 (meeting_id, sender, recipient, kind, text, client_id, now),
             )
-            if sender != "human":
+            if sender == "human" and recipient in meeting["participants"]:
+                # A direct human message also assigns the floor. This keeps turn
+                # control in the ordinary chat flow instead of requiring a
+                # separate, easy-to-misread "pass turn" control.
+                db.execute(
+                    "UPDATE meetings SET next_speaker=? WHERE id=?",
+                    (recipient, meeting_id),
+                )
+            elif sender != "human":
                 participants = meeting["participants"]
                 index = (participants.index(sender) + 1) % len(participants)
                 turns = meeting["turn_count"] + 1
@@ -200,8 +218,8 @@ class RoomStore:
             row = db.execute("SELECT * FROM messages WHERE id=?", (message_id,)).fetchone()
         return dict(row)
 
-    def control(self, meeting_id: str, action: str, next_speaker: str | None = None) -> dict:
-        if action not in {"pause", "resume", "end", "pass"}:
+    def control(self, meeting_id: str, action: str) -> dict:
+        if action not in {"pause", "resume", "end"}:
             raise ValueError("invalid control action")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -215,14 +233,6 @@ class RoomStore:
                 db.execute("UPDATE meetings SET status='active' WHERE id=?", (meeting_id,))
             elif action == "end" and meeting["status"] != "ended":
                 db.execute("UPDATE meetings SET status='ended',ended_at=? WHERE id=?", (utc_now(), meeting_id))
-            elif action == "pass":
-                if meeting["status"] == "ended":
-                    db.execute("ROLLBACK")
-                    raise Conflict("cannot pass an ended meeting")
-                if next_speaker not in meeting["participants"]:
-                    db.execute("ROLLBACK")
-                    raise ValueError("next_speaker must be a participant")
-                db.execute("UPDATE meetings SET next_speaker=? WHERE id=?", (next_speaker, meeting_id))
             else:
                 db.execute("ROLLBACK")
                 raise Conflict(f"cannot {action} a {meeting['status']} meeting")

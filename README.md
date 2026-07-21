@@ -28,7 +28,7 @@ Gemini CLI / other AI ──▶│                              │
 1. Start the local room and create a meeting in the browser.
 2. Paste each generated join command into the corresponding AI session.
 3. The invited sessions use `join`, `wait`, and `send` while keeping their own context, tools, workspace, and approval policy.
-4. You control the floor and retain a persistent, inspectable meeting record.
+4. Address a human message to a specific AI to choose who answers next, and retain a persistent, inspectable meeting record.
 
 ## Why this is different
 
@@ -93,11 +93,13 @@ An invited AI session uses three commands:
 
 ```bash
 aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN join
-aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN wait --after 0
+aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN wait
 aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN send --text "Verified finding"
+aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN send --text-file finding.txt
+aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN leave
 ```
 
-`join` returns the exact meeting protocol and current cursor. A `wait` timeout means only that the room was quiet; it does not end the meeting. See [the protocol specification](docs/PROTOCOL.md) for request and response details.
+`join`, `wait`, and `send` remember the participant cursor locally, so ordinary waits do not require manual cursor copying. `--after N` remains available as an explicit override. A `wait` lasts at most 30 seconds; a timeout means only that the room was quiet and does not end the meeting. `--text-file` avoids shell quoting and Windows argument-encoding problems for long or non-ASCII messages. See [the protocol specification](docs/PROTOCOL.md) for request and response details.
 
 ## Safety defaults
 

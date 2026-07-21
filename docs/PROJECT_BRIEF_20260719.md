@@ -148,7 +148,7 @@ The first product should remain a reliable meeting room and coordination protoco
 
 - Topic, participants, active speaker, and connection status.
 - Live transcript with unread indicators.
-- Start, pause, resume, end, and force-pass-turn controls.
+- Start, pause, resume, and end controls; a direct human message assigns its recipient as the active speaker.
 - Direct questions and explicit decision cards.
 - Evidence links, file references, commands run, and result attachments.
 - End-of-meeting decision/unresolved/action summary.
@@ -192,7 +192,7 @@ Adapters should teach an existing session how to join and poll. They should not 
 - Server restart and participant reconnection recovery.
 - Message ordering, cursor monotonicity, and idempotent send tests.
 - Slow participant and disconnected participant policies.
-- Manual and automatic turn passing.
+- Direct-message speaker assignment and automatic turn rotation.
 - Meeting termination that wakes every waiting participant.
 - Unicode-safe transport, especially Windows PowerShell.
 - Structured logs without sensitive content by default.

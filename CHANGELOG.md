@@ -8,6 +8,9 @@ All notable changes to AI Team Room are documented here.
 - Make frozen builds generate participant commands using the bundled client.
 - Add repeatable packaged-application smoke tests.
 - Support optional Windows signing and Apple signing/notarization in CI.
+- Remove the ambiguous pass-turn control; a direct human message now assigns the next responder.
+- Show recent activity and last-contact time instead of treating every past participant as permanently joined.
+- Add participant `leave`, UTF-8 `--text-file`, automatic cursor reuse, and explicit 30-second wait-cap guidance.
 
 ## 0.1.0 — 2026-07-21
 

@@ -250,6 +250,7 @@ def handler_factory(app: RoomApp, allowed_origins: set[str]):
                         sender = "human"
                     else:
                         meeting_id, sender = identity["meeting"], identity["participant"]
+                        app.store.touch(meeting_id, sender)
                         if data.get("sender") and data["sender"] != sender:
                             raise PermissionError("participant token does not match sender")
                     if not meeting_id:
@@ -261,12 +262,19 @@ def handler_factory(app: RoomApp, allowed_origins: set[str]):
                     app.notify()
                     self.json({"ok": True, "message": message, "duplicate": duplicate}, 200 if duplicate else 201)
                     return
+                if parsed.path == "/api/leave":
+                    if identity["role"] != "participant":
+                        raise PermissionError("participant token required")
+                    app.store.leave(identity["meeting"], identity["participant"])
+                    app.notify()
+                    self.json({"ok": True, "left": identity["participant"]})
+                    return
                 if parsed.path == "/api/control":
                     self.require_control()
                     meeting_id = data.get("meeting_id") or (app.store.latest() or {}).get("id")
                     if not meeting_id:
                         raise ValueError("meeting_id is required")
-                    meeting = app.store.control(meeting_id, data.get("action", ""), data.get("next_speaker"))
+                    meeting = app.store.control(meeting_id, data.get("action", ""))
                     app.notify()
                     self.json({"ok": True, "meeting": meeting})
                     return

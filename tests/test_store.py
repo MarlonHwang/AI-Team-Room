@@ -49,23 +49,37 @@ class StoreTests(unittest.TestCase):
         self.assertTrue(duplicate)
         self.assertEqual(first["id"], retried["id"])
 
-    def test_human_interrupt_does_not_consume_agent_turn(self):
+    def test_direct_human_message_assigns_floor_without_consuming_turn(self):
         self.store.send(self.meeting["id"], "human", "codex", "question", "verify this", "human-1")
+        current = self.store.get(self.meeting["id"])
+        self.assertEqual(current["next_speaker"], "codex")
+        self.assertEqual(current["turn_count"], 0)
+
+    def test_broadcast_human_message_preserves_floor(self):
+        self.store.send(self.meeting["id"], "human", "all", "talk", "note for everyone", "human-all")
         current = self.store.get(self.meeting["id"])
         self.assertEqual(current["next_speaker"], "claude")
         self.assertEqual(current["turn_count"], 0)
 
-    def test_pause_resume_force_pass_and_end(self):
+    def test_pause_direct_assignment_resume_and_end(self):
         meeting_id = self.meeting["id"]
         self.assertEqual(self.store.control(meeting_id, "pause")["status"], "paused")
-        self.store.send(meeting_id, "human", "all", "talk", "Human interruption", "paused-human")
+        self.store.send(meeting_id, "human", "codex", "talk", "Codex continues", "paused-human")
         with self.assertRaises(Conflict):
             self.store.send(meeting_id, "claude", "all", "talk", "during pause", "p")
-        self.store.control(meeting_id, "pass", "codex")
         self.assertEqual(self.store.control(meeting_id, "resume")["next_speaker"], "codex")
         self.assertEqual(self.store.control(meeting_id, "end")["status"], "ended")
-        with self.assertRaises(Conflict):
-            self.store.control(meeting_id, "pass", "claude")
+        with self.assertRaisesRegex(ValueError, "invalid control action"):
+            self.store.control(meeting_id, "pass")
+
+    def test_leave_removes_presence_until_next_contact(self):
+        meeting_id = self.meeting["id"]
+        self.store.touch(meeting_id, "claude")
+        self.assertEqual([item["participant"] for item in self.store.presence(meeting_id)], ["claude"])
+        self.store.leave(meeting_id, "claude")
+        self.assertEqual(self.store.presence(meeting_id), [])
+        self.store.touch(meeting_id, "claude")
+        self.assertEqual([item["participant"] for item in self.store.presence(meeting_id)], ["claude"])
 
     def test_only_one_open_meeting(self):
         with self.assertRaises(Conflict):
