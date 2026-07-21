@@ -111,6 +111,18 @@ aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN send --text "Verified
 
 LAN exposure is intentionally not a polished feature. Read [SECURITY.md](SECURITY.md) before using `--allow-network`.
 
+## Code signing policy
+
+Windows release signing is provided free of charge by
+[SignPath.io](https://signpath.io/), with a certificate issued to the
+[SignPath Foundation](https://signpath.org/). Only artifacts built from this
+public repository's reviewed source and release workflow are eligible for
+signing.
+
+- Committer and reviewer: [MarlonHwang](https://github.com/MarlonHwang)
+- Release approver: [MarlonHwang](https://github.com/MarlonHwang)
+- Privacy policy: [PRIVACY.md](PRIVACY.md)
+
 ## Development
 
 ```bash
@@ -125,6 +137,7 @@ The test matrix runs on Windows, macOS, and Linux with Python 3.11 and 3.13. Bef
 - [Architecture](docs/ARCHITECTURE.md)
 - [Wire protocol](docs/PROTOCOL.md)
 - [Security policy](SECURITY.md)
+- [Privacy policy](PRIVACY.md)
 - [Launch notes and ready-to-use announcement copy](docs/LAUNCH.md)
 - [Original product brief](docs/PROJECT_BRIEF_20260719.md)
 - [Changelog](CHANGELOG.md)
