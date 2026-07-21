@@ -52,6 +52,22 @@ class RoomApp:
         return dict(cached)
 
     def join_command(self, token: str) -> str:
+        if getattr(sys, "frozen", False):
+            # Frozen releases ship the participant client beside the server
+            # executable. sys.executable is the server itself in that case,
+            # so invoking it with `-m ai_team_room.cli` would restart the room.
+            client_name = "aitr.exe" if os.name == "nt" else "aitr"
+            client = str(Path(sys.executable).resolve().with_name(client_name))
+            if os.name == "nt":
+                quoted_client = client.replace("'", "''")
+                return (
+                    f"& '{quoted_client}' --url {self.base_url} "
+                    f"--token {token} join"
+                )
+            return (
+                f"{shlex.quote(client)} --url {shlex.quote(self.base_url)} "
+                f"--token {shlex.quote(token)} join"
+            )
         source_root = str(Path(__file__).resolve().parents[1])
         if os.name == "nt":
             root = source_root.replace("'", "''")

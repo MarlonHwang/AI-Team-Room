@@ -44,6 +44,24 @@ Gemini CLI / other AI ──▶│                              │
 
 AI Team Room requires Python 3.11 or newer and has no runtime dependencies.
 
+### Windows portable release
+
+Download `AI-Team-Room-<version>-Windows-x64.zip` from GitHub Releases, extract
+the folder, and double-click `AI-Team-Room.exe`. Python is not required. Keep
+`AI-Team-Room.exe` and `aitr.exe` together so generated participant invitations
+can use the bundled command-line client.
+
+### macOS app release
+
+Download the DMG matching the Mac processor from GitHub Releases:
+
+- `macOS-arm64` for Apple Silicon (M1 and newer)
+- `macOS-x64` for Intel Macs
+
+Open the DMG and launch `AI-Team-Room.app`. Python is not required. Signed and
+notarized builds are produced automatically when the Apple signing credentials
+are configured for the repository.
+
 ### Install the latest release from GitHub
 
 ```bash

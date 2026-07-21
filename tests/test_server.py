@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
@@ -65,6 +67,37 @@ class ServerTests(unittest.TestCase):
                 "sender":"codex", "text":"spoof", "recipient":"all", "client_id":"bad"
             })
         self.assertEqual(caught.exception.code, 401)
+
+    def test_frozen_windows_join_command_uses_bundled_client(self):
+        token = "participant-token"
+        with (
+            patch("ai_team_room.server.os.name", "nt"),
+            patch.object(sys, "frozen", True, create=True),
+            patch("ai_team_room.server.sys.executable", r"C:\Program Files\AI Team Room\AI-Team-Room.exe"),
+        ):
+            command = self.app.join_command(token)
+        self.assertEqual(
+            command,
+            "& 'C:\\Program Files\\AI Team Room\\aitr.exe' "
+            "--url http://127.0.0.1:8765 --token participant-token join",
+        )
+
+    @unittest.skipUnless(sys.platform == "darwin", "macOS only")
+    def test_frozen_macos_join_command_uses_bundled_client(self):
+        token = "participant-token"
+        with (
+            patch.object(sys, "frozen", True, create=True),
+            patch(
+                "ai_team_room.server.sys.executable",
+                "/Applications/AI Team Room.app/Contents/MacOS/AI-Team-Room",
+            ),
+        ):
+            command = self.app.join_command(token)
+        self.assertEqual(
+            command,
+            "'/Applications/AI Team Room.app/Contents/MacOS/aitr' "
+            "--url http://127.0.0.1:8765 --token participant-token join",
+        )
 
     def test_missing_token_and_cross_origin_are_rejected(self):
         with self.assertRaises(HTTPError) as missing:

@@ -1,0 +1,123 @@
+name: package desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Read package version
+        shell: pwsh
+        run: |
+          $version = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])"
+          "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Build Windows package
+        shell: pwsh
+        run: ./scripts/build_windows.ps1 -Version $env:PACKAGE_VERSION
+      - name: Sign Windows executables
+        if: env.WINDOWS_CERTIFICATE_PFX_BASE64 != ''
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $certificate = Join-Path $env:RUNNER_TEMP 'windows-signing.pfx'
+          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX_BASE64))
+          $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signTool) { throw 'signtool.exe was not found' }
+          $package = 'dist\windows\AI-Team-Room-Windows-x64'
+          foreach ($exe in @('AI-Team-Room.exe', 'aitr.exe')) {
+            & $signTool.FullName sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD (Join-Path $package $exe)
+          }
+          $zip = "dist\windows\AI-Team-Room-$env:PACKAGE_VERSION-Windows-x64.zip"
+          Remove-Item -LiteralPath $zip -Force
+          Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal
+      - name: Smoke test frozen Windows package
+        run: python scripts/smoke_windows_release.py
+      - name: Checksums
+        shell: pwsh
+        run: Get-FileHash -Algorithm SHA256 dist/windows/*.zip | Format-List
+      - uses: actions/upload-artifact@v6
+        with:
+          name: AI-Team-Room-Windows-x64
+          path: dist/windows/*.zip
+          if-no-files-found: error
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Read package version
+        run: |
+          VERSION=$(python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
+          echo "PACKAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Import Apple Developer ID certificate
+        if: env.APPLE_CERTIFICATE_P12_BASE64 != ''
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERTIFICATE="$RUNNER_TEMP/apple-signing.p12"
+          KEYCHAIN="$RUNNER_TEMP/ai-team-room.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+          echo "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERTIFICATE"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERTIFICATE" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+      - name: Build macOS app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: bash scripts/build_macos.sh "$PACKAGE_VERSION"
+      - name: Smoke test frozen macOS app
+        run: python scripts/smoke_macos_release.py
+      - name: Notarize Apple packages
+        if: env.APPLE_ID != '' && env.APPLE_TEAM_ID != '' && env.APPLE_APP_SPECIFIC_PASSWORD != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          for package in dist/macos/*.dmg dist/macos/*.zip; do
+            xcrun notarytool submit "$package" \
+              --apple-id "$APPLE_ID" \
+              --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --wait
+          done
+          xcrun stapler staple dist/macos/*.dmg
+      - name: Verify app and checksums
+        run: |
+          codesign --verify --deep --strict --verbose=2 dist/macos/AI-Team-Room.app
+          shasum -a 256 dist/macos/*.dmg dist/macos/*.zip
+      - uses: actions/upload-artifact@v6
+        with:
+          name: AI-Team-Room-macOS-${{ matrix.arch }}
+          path: |
+            dist/macos/*.dmg
+            dist/macos/*.zip
+          if-no-files-found: error
