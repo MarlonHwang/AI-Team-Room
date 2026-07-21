@@ -47,11 +47,14 @@ trap 'rm -f "$submit_json"' EXIT
 # Submitting the DMG also creates a ticket for its nested app bundle. This lets
 # us staple the app and build the final distributable ZIP without a second
 # notarization submission.
-retry 5 xcrun notarytool submit "$DMG_PATH" \
-  "${credentials[@]}" \
-  --no-s3-acceleration \
-  --output-format json \
-  > "$submit_json"
+submit_package() {
+  xcrun notarytool submit "$DMG_PATH" \
+    "${credentials[@]}" \
+    --no-s3-acceleration \
+    --output-format json \
+    > "$submit_json"
+}
+retry 5 submit_package
 
 submission_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["id"])' "$submit_json")"
 echo "Apple notarization submission: $submission_id"
@@ -95,4 +98,3 @@ xcrun stapler validate "$DMG_PATH"
 # A ZIP cannot itself be stapled. Rebuild it after stapling the nested app.
 rm -f "$ZIP_PATH"
 ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
-

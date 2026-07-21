@@ -120,7 +120,9 @@ jobs:
       - name: Build macOS app
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: bash scripts/build_macos.sh "$PACKAGE_VERSION"
+        run: |
+          test -n "$APPLE_SIGNING_IDENTITY"
+          bash scripts/build_macos.sh "$PACKAGE_VERSION"
       - name: Smoke test frozen macOS app
         run: python scripts/smoke_macos_release.py
       - name: Notarize Apple packages
