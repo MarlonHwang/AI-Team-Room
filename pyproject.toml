@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,12 +8,12 @@ version = "0.1.0"
 description = "A local meeting room for AI coding sessions you already have open"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
-authors = [{ name = "Madoros Studio" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Madoro Studio" }]
 keywords = ["ai", "coding-agent", "claude-code", "codex", "collaboration"]
 classifiers = [
   "Development Status :: 3 - Alpha",
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -26,8 +26,10 @@ ai-team-room = "ai_team_room.server:main"
 aitr = "ai_team_room.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/madoros/ai-team-room"
-Issues = "https://github.com/madoros/ai-team-room/issues"
+Homepage = "https://github.com/MarlonHwang/AI-Team-Room"
+Repository = "https://github.com/MarlonHwang/AI-Team-Room"
+Issues = "https://github.com/MarlonHwang/AI-Team-Room/issues"
+Changelog = "https://github.com/MarlonHwang/AI-Team-Room/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
