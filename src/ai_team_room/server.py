@@ -13,7 +13,7 @@ import time
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from urllib.parse import parse_qs, urlparse
 
 from .auth import TokenSigner, random_token
@@ -57,13 +57,16 @@ class RoomApp:
             # executable. sys.executable is the server itself in that case,
             # so invoking it with `-m ai_team_room.cli` would restart the room.
             client_name = "aitr.exe" if os.name == "nt" else "aitr"
-            client = str(Path(sys.executable).resolve().with_name(client_name))
             if os.name == "nt":
+                # PureWindowsPath keeps this branch testable on non-Windows
+                # runners and avoids instantiating WindowsPath on POSIX.
+                client = str(PureWindowsPath(sys.executable).with_name(client_name))
                 quoted_client = client.replace("'", "''")
                 return (
                     f"& '{quoted_client}' --url {self.base_url} "
                     f"--token {token} join"
                 )
+            client = str(Path(sys.executable).resolve().with_name(client_name))
             return (
                 f"{shlex.quote(client)} --url {shlex.quote(self.base_url)} "
                 f"--token {shlex.quote(token)} join"
