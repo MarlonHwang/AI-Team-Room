@@ -31,7 +31,6 @@ mkdir -p "$WORK_ROOT/spec" "$WORK_ROOT/work" "$DIST_ROOT"
 COMMON=(
   --noconfirm
   --clean
-  --onefile
   --paths "$REPO_ROOT/src"
   --collect-data ai_team_room
   --workpath "$WORK_ROOT/work"
@@ -40,24 +39,32 @@ COMMON=(
 )
 
 "$BUILD_PYTHON" -m PyInstaller "${COMMON[@]}" \
+  --onedir \
   --windowed \
   --osx-bundle-identifier studio.madoro.aiteamroom \
   --name AI-Team-Room \
   "$REPO_ROOT/scripts/windows_server_entry.py"
 
 "$BUILD_PYTHON" -m PyInstaller "${COMMON[@]}" \
+  --onefile \
   --name aitr \
   "$REPO_ROOT/scripts/windows_client_entry.py"
 
 cp "$DIST_ROOT/aitr" "$APP_PATH/Contents/MacOS/aitr"
 chmod +x "$APP_PATH/Contents/MacOS/aitr"
 
-/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName AI Team Room" \
-  "$APP_PATH/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" \
-  "$APP_PATH/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" \
-  "$APP_PATH/Contents/Info.plist"
+set_plist_string() {
+  local key="$1"
+  local value="$2"
+  local plist="$APP_PATH/Contents/Info.plist"
+  if ! /usr/libexec/PlistBuddy -c "Set :$key $value" "$plist"; then
+    /usr/libexec/PlistBuddy -c "Add :$key string $value" "$plist"
+  fi
+}
+
+set_plist_string CFBundleDisplayName "AI Team Room"
+set_plist_string CFBundleShortVersionString "$VERSION"
+set_plist_string CFBundleVersion "$VERSION"
 
 if [[ -n "${APPLE_SIGNING_IDENTITY:-}" ]]; then
   codesign --force --deep --options runtime --timestamp \
