@@ -79,5 +79,11 @@ ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
 hdiutil create -quiet -volname "AI Team Room" -srcfolder "$APP_PATH" \
   -ov -format UDZO "$DMG_PATH"
 
+if [[ -n "${APPLE_SIGNING_IDENTITY:-}" ]]; then
+  codesign --force --timestamp -i studio.madoro.aiteamroom.dmg \
+    --sign "$APPLE_SIGNING_IDENTITY" "$DMG_PATH"
+  codesign --verify --strict --verbose=2 "$DMG_PATH"
+fi
+
 echo "$ZIP_PATH"
 echo "$DMG_PATH"
