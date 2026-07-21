@@ -43,7 +43,7 @@ $Common = @(
     "--distpath", $PackageRoot
 )
 
-& $BuildPython -m PyInstaller @Common --name "AI-Team-Room" (Join-Path $RepoRoot "scripts\windows_server_entry.py")
+& $BuildPython -m PyInstaller @Common --windowed --name "AI-Team-Room" (Join-Path $RepoRoot "scripts\windows_server_entry.py")
 & $BuildPython -m PyInstaller @Common --name "aitr" (Join-Path $RepoRoot "scripts\windows_client_entry.py")
 
 Copy-Item -LiteralPath (Join-Path $RepoRoot "LICENSE") -Destination $PackageRoot

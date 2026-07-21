@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import struct
 import tempfile
 import time
 from pathlib import Path
@@ -15,6 +16,20 @@ SERVER = PACKAGE / "AI-Team-Room.exe"
 CLIENT = PACKAGE / "aitr.exe"
 PORT = 18765
 CONTROL_TOKEN = "windows-smoke-" + "z" * 40
+
+
+def pe_subsystem(path: Path) -> int:
+    """Return the PE optional-header subsystem (2=GUI, 3=console)."""
+    with path.open("rb") as executable:
+        if executable.read(2) != b"MZ":
+            raise RuntimeError(f"Not a PE executable: {path}")
+        executable.seek(0x3C)
+        pe_offset = struct.unpack("<I", executable.read(4))[0]
+        executable.seek(pe_offset)
+        if executable.read(4) != b"PE\0\0":
+            raise RuntimeError(f"Invalid PE signature: {path}")
+        executable.seek(pe_offset + 24 + 68)
+        return struct.unpack("<H", executable.read(2))[0]
 
 
 def request(path: str, *, token: str | None = None, payload: dict | None = None) -> dict | str:
@@ -34,6 +49,13 @@ def request(path: str, *, token: str | None = None, payload: dict | None = None)
 def main() -> int:
     if not SERVER.exists() or not CLIENT.exists():
         raise SystemExit("Build the Windows release before running this smoke test")
+
+    server_subsystem = pe_subsystem(SERVER)
+    client_subsystem = pe_subsystem(CLIENT)
+    if server_subsystem != 2:
+        raise RuntimeError(f"Server must be a windowed GUI executable, got {server_subsystem}")
+    if client_subsystem != 3:
+        raise RuntimeError(f"Client must remain a console executable, got {client_subsystem}")
 
     with tempfile.TemporaryDirectory(prefix="ai-team-room-windows-smoke-") as data_dir:
         process = subprocess.Popen(
@@ -97,6 +119,8 @@ def main() -> int:
                 "server_home_bytes": len(home),
                 "join_command_uses_bundled_client": True,
                 "bundled_client_exit": client.returncode,
+                "server_subsystem": "windows_gui",
+                "client_subsystem": "windows_console",
                 "server_exe_bytes": SERVER.stat().st_size,
                 "client_exe_bytes": CLIENT.stat().st_size,
             }
