@@ -9,6 +9,32 @@ permissions:
   contents: read
 
 jobs:
+  python-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build Python packages
+        run: |
+          python -m pip install --disable-pip-version-check build
+          python -m build
+      - name: Verify wheel installs and starts
+        run: |
+          python -m venv "$RUNNER_TEMP/package-check"
+          "$RUNNER_TEMP/package-check/bin/python" -m pip install --disable-pip-version-check --no-deps dist/*.whl
+          "$RUNNER_TEMP/package-check/bin/aitr" --help
+      - name: Checksums
+        run: sha256sum dist/*.whl dist/*.tar.gz
+      - uses: actions/upload-artifact@v6
+        with:
+          name: AI-Team-Room-Python
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+
   windows-x64:
     runs-on: windows-2025
     steps:
@@ -55,6 +81,7 @@ jobs:
           if-no-files-found: error
 
   macos:
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -74,11 +101,12 @@ jobs:
           VERSION=$(python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
           echo "PACKAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Import Apple Developer ID certificate
-        if: env.APPLE_CERTIFICATE_P12_BASE64 != ''
         env:
           APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          test -n "$APPLE_CERTIFICATE_P12_BASE64"
+          test -n "$APPLE_CERTIFICATE_PASSWORD"
           CERTIFICATE="$RUNNER_TEMP/apple-signing.p12"
           KEYCHAIN="$RUNNER_TEMP/ai-team-room.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
@@ -96,23 +124,18 @@ jobs:
       - name: Smoke test frozen macOS app
         run: python scripts/smoke_macos_release.py
       - name: Notarize Apple packages
-        if: env.APPLE_ID != '' && env.APPLE_TEAM_ID != '' && env.APPLE_APP_SPECIFIC_PASSWORD != ''
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          for package in dist/macos/*.dmg dist/macos/*.zip; do
-            xcrun notarytool submit "$package" \
-              --apple-id "$APPLE_ID" \
-              --team-id "$APPLE_TEAM_ID" \
-              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-              --wait
-          done
-          xcrun stapler staple dist/macos/*.dmg
+          bash scripts/notarize_macos.sh "$PACKAGE_VERSION"
       - name: Verify app and checksums
         run: |
           codesign --verify --deep --strict --verbose=2 dist/macos/AI-Team-Room.app
+          spctl --assess --type execute --verbose=2 dist/macos/AI-Team-Room.app
+          hdiutil verify dist/macos/*.dmg
+          spctl --assess --type open --context context:primary-signature --verbose=2 dist/macos/*.dmg
           shasum -a 256 dist/macos/*.dmg dist/macos/*.zip
       - uses: actions/upload-artifact@v6
         with:
@@ -120,4 +143,6 @@ jobs:
           path: |
             dist/macos/*.dmg
             dist/macos/*.zip
+            dist/macos/notarization-*.json
+            dist/macos/notarization-info-*.json
           if-no-files-found: error

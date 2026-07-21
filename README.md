@@ -65,7 +65,7 @@ are configured for the repository.
 ### Install the latest release from GitHub
 
 ```bash
-python -m pip install "ai-team-room @ https://github.com/MarlonHwang/AI-Team-Room/releases/download/v0.1.0/ai_team_room-0.1.0-py3-none-any.whl"
+python -m pip install "ai-team-room @ https://github.com/MarlonHwang/AI-Team-Room/releases/download/v0.1.1/ai_team_room-0.1.1-py3-none-any.whl"
 ai-team-room
 ```
 
