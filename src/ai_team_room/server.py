@@ -239,7 +239,7 @@ def handler_factory(app: RoomApp, allowed_origins: set[str]):
                     self.require_control()
                     meeting = app.store.create(
                         data.get("topic", ""), data.get("participants", ["claude", "codex"]),
-                        data.get("first_speaker", "claude"), int(data.get("max_turns", 20)),
+                        data.get("first_speaker", "claude"),
                     )
                     app.notify()
                     invitations, commands = app.invitation_bundle(meeting)

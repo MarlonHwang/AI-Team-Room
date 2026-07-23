@@ -42,7 +42,7 @@ class ServerTests(unittest.TestCase):
     def create(self):
         return self.request("/api/meetings", self.control, "POST", {
             "topic":"Review implementation", "participants":["claude","codex"],
-            "first_speaker":"claude", "max_turns":5,
+            "first_speaker":"claude",
         })[1]
 
     def test_auth_identity_turn_and_direct_message_filter(self):
@@ -143,20 +143,39 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result["left"], "claude")
         self.assertEqual(self.app.store.presence(meeting["id"]), [])
 
-    def test_direct_human_message_assigns_floor_and_pass_control_is_removed(self):
+    def test_direct_human_message_preserves_opening_order_and_pass_control_is_removed(self):
         created = self.create(); meeting = created["meeting"]
         self.request("/api/messages", self.control, "POST", {
             "meeting_id": meeting["id"], "text": "Codex, inspect this",
             "recipient": "codex", "client_id": "assign-codex",
         })
         _, state = self.request("/api/state", self.control)
-        self.assertEqual(state["meeting"]["next_speaker"], "codex")
+        self.assertEqual(state["meeting"]["next_speaker"], "claude")
         self.assertEqual(state["meeting"]["turn_count"], 0)
         with self.assertRaises(HTTPError) as caught:
             self.request("/api/control", self.control, "POST", {
                 "meeting_id": meeting["id"], "action": "pass",
             })
         self.assertEqual(caught.exception.code, 400)
+
+    def test_open_floor_allows_any_participant_and_never_auto_ends(self):
+        created = self.create(); meeting = created["meeting"]; invites = created["invitations"]
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/messages", invites["codex"], "POST", {
+                "text": "too early", "recipient": "all", "client_id": "early",
+            })
+        self.assertEqual(caught.exception.code, 409)
+        self.request("/api/messages", invites["claude"], "POST", {
+            "text": "opening", "recipient": "all", "client_id": "opening",
+        })
+        for index, participant in enumerate(["claude", "claude", "codex", "codex", "claude", "codex"]):
+            self.request("/api/messages", invites[participant], "POST", {
+                "text": f"free {index}", "recipient": "all", "client_id": f"free-{participant}-{index}",
+            })
+        _, state = self.request("/api/state", self.control)
+        self.assertEqual(state["meeting"]["next_speaker"], "all")
+        self.assertEqual(state["meeting"]["turn_count"], 7)
+        self.assertEqual(state["meeting"]["status"], "active")
 
 
 if __name__ == "__main__":
