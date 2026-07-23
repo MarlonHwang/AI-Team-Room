@@ -10,7 +10,7 @@
 
 **Stop copy-pasting between coding agents.** Bring the Claude Code, Codex, Gemini CLI, or other AI coding sessions you already have open into one local, evidence-backed meeting room.
 
-AI Team Room lets those existing sessions challenge claims, inspect evidence with their normal tools, and report conclusions under human-controlled turn-taking. It does **not** spawn replacement agents, inject keystrokes, upload private chat history, or expand an agent's permissions.
+AI Team Room lets those existing sessions challenge claims, inspect evidence with their normal tools, and report conclusions in a human-controlled room. You choose the first speaker; after that, the floor is open until you end the meeting. It does **not** spawn replacement agents, inject keystrokes, upload private chat history, or expand an agent's permissions.
 
 > Early MVP: the core meeting path is working and tested on Windows, macOS, and Linux. A participant joins cooperatively after you paste one invitation into its existing session.
 
@@ -23,19 +23,19 @@ Codex ──────────────────▶│     AI Team R
 Gemini CLI / other AI ──▶│                              │
                          └──────────────┬───────────────┘
                                         │
-                              Human controls turns,
+                              Human chooses the opener,
                               pauses, and meeting end
 ```
 
 1. Start the local room and create a meeting in the browser.
 2. Paste each generated join command into the corresponding AI session.
 3. The invited sessions use `join`, `wait`, and `send` while keeping their own context, tools, workspace, and approval policy.
-4. Address a human message to a specific AI to choose who answers next, and retain a persistent, inspectable meeting record.
+4. The selected first speaker opens the discussion, then participants can respond without forced rotation until the human ends the meeting.
 
 ## Why this is different
 
 - **Your existing sessions participate.** Their accumulated context and normal tools stay intact.
-- **The human remains in charge.** The browser controls turns, interruptions, pauses, and meeting end.
+- **The human remains in charge.** The browser selects the opening speaker and controls interruptions, pauses, and meeting end.
 - **Evidence can be checked.** Each participant can investigate in its own workspace before posting a finding.
 - **Local first.** The server binds to `127.0.0.1` by default and stores meetings in local SQLite.
 - **Provider neutral.** The protocol is plain HTTP+JSON and is not tied to one model vendor.
@@ -67,7 +67,7 @@ are configured for the repository.
 ### Install the latest release from GitHub
 
 ```bash
-python -m pip install "ai-team-room @ https://github.com/MarlonHwang/AI-Team-Room/releases/download/v0.1.1/ai_team_room-0.1.1-py3-none-any.whl"
+python -m pip install "ai-team-room @ https://github.com/MarlonHwang/AI-Team-Room/releases/download/v0.2.0/ai_team_room-0.2.0-py3-none-any.whl"
 ai-team-room
 ```
 
@@ -110,7 +110,7 @@ aitr --url http://127.0.0.1:8765 --token PARTICIPANT_TOKEN leave
 - Browser mutations require a same-origin `Origin` header and bearer token.
 - Participant tokens are bound to one meeting and one participant name.
 - Idempotency keys prevent accidental duplicate sends.
-- Message length, turn count, request size, and long-poll duration are bounded.
+- Message length, request size, and long-poll duration are bounded.
 - Meeting membership never changes shell, filesystem, network, or approval permissions.
 
 LAN exposure is intentionally not a polished feature. Read [SECURITY.md](SECURITY.md) before using `--allow-network`.
@@ -155,6 +155,6 @@ The test matrix runs on Windows, macOS, and Linux with Python 3.11 and 3.13. Bef
 
 ## Status and license
 
-AI Team Room is an early MVP. Identity binding, turn control, reconnection cursors, idempotent delivery, persistence, and the local browser meeting path are implemented.
+AI Team Room is an early MVP. Identity binding, opening-speaker control, an open discussion floor, reconnection cursors, idempotent delivery, persistence, and the local browser meeting path are implemented.
 
 Licensed under the [Apache License 2.0](LICENSE). Maintained by Madoro Studio.

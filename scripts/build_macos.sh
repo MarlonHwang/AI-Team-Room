@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PYTHON="${PYTHON:-python3}"
-VERSION="${1:-0.1.1}"
+VERSION="${1:-0.2.0}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_VENV="$REPO_ROOT/.venv-build-macos"
 BUILD_PYTHON="$BUILD_VENV/bin/python"

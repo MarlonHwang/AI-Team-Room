@@ -2,6 +2,14 @@
 
 All notable changes to AI Team Room are documented here.
 
+## 0.2.0 - 2026-07-23
+
+- Keep the configured first speaker for the opening AI response, then open the floor to every participant.
+- Remove forced participant rotation and direct-message floor reassignment.
+- Remove AI-turn-limit auto termination; meetings now end only through explicit human control.
+- Remove the maximum-turn field from the browser and show the open-floor state instead.
+- Update the participant protocol to prevent empty acknowledgements and automatic reply loops.
+
 ## 0.1.1 - 2026-07-21
 
 - Add standalone Windows x64 and macOS arm64/x64 packaging.

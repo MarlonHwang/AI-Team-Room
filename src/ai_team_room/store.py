@@ -90,7 +90,13 @@ class RoomStore:
         with self.connect() as db:
             return self._meeting(db.execute("SELECT * FROM meetings WHERE id=?", (meeting_id,)).fetchone())
 
-    def create(self, topic: str, participants: list[str], first_speaker: str, max_turns: int) -> dict:
+    def create(
+        self,
+        topic: str,
+        participants: list[str],
+        first_speaker: str,
+        max_turns: int | None = None,
+    ) -> dict:
         import json
         if not isinstance(topic, str) or not isinstance(participants, list) or not all(isinstance(p, str) for p in participants):
             raise ValueError("topic must be text and participants must be a list of names")
@@ -104,14 +110,14 @@ class RoomStore:
             raise ValueError("participant names must be 1..32 letters, numbers, '-' or '_'")
         if first_speaker not in participants:
             raise ValueError("first_speaker must be a participant")
-        if not 1 <= max_turns <= 100:
-            raise ValueError("max_turns must be 1..100")
         meeting_id, now = str(uuid.uuid4()), utc_now()
         try:
             with self.connect() as db:
                 db.execute(
                     "INSERT INTO meetings VALUES(?,?,'active',?,?,0,?,?,NULL)",
-                    (meeting_id, topic, json.dumps(participants), first_speaker, max_turns, now),
+                    # Keep the legacy column for existing databases. Zero means
+                    # that only explicit human control ends the meeting.
+                    (meeting_id, topic, json.dumps(participants), first_speaker, 0, now),
                 )
                 db.execute(
                     "INSERT INTO messages(meeting_id,sender,recipient,kind,text,client_id,created_at) VALUES(?,'human','all','system',?,NULL,?)",
@@ -186,29 +192,22 @@ class RoomStore:
             if meeting["status"] == "ended" or (meeting["status"] == "paused" and sender != "human"):
                 db.execute("ROLLBACK")
                 raise Conflict("meeting is not active")
-            if sender != "human" and sender != meeting["next_speaker"]:
+            if (
+                sender != "human"
+                and meeting["turn_count"] == 0
+                and sender != meeting["next_speaker"]
+            ):
                 db.execute("ROLLBACK")
-                raise Conflict(f"not {sender}'s turn; waiting for {meeting['next_speaker']}")
+                raise Conflict(f"the opening response belongs to {meeting['next_speaker']}")
             cursor = db.execute(
                 "INSERT INTO messages(meeting_id,sender,recipient,kind,text,client_id,created_at) VALUES(?,?,?,?,?,?,?)",
                 (meeting_id, sender, recipient, kind, text, client_id, now),
             )
-            if sender == "human" and recipient in meeting["participants"]:
-                # A direct human message also assigns the floor. This keeps turn
-                # control in the ordinary chat flow instead of requiring a
-                # separate, easy-to-misread "pass turn" control.
-                db.execute(
-                    "UPDATE meetings SET next_speaker=? WHERE id=?",
-                    (recipient, meeting_id),
-                )
-            elif sender != "human":
-                participants = meeting["participants"]
-                index = (participants.index(sender) + 1) % len(participants)
+            if sender != "human":
                 turns = meeting["turn_count"] + 1
-                status = "ended" if turns >= meeting["max_turns"] else "active"
                 db.execute(
-                    "UPDATE meetings SET next_speaker=?,turn_count=?,status=?,ended_at=? WHERE id=?",
-                    (participants[index], turns, status, now if status == "ended" else None, meeting_id),
+                    "UPDATE meetings SET next_speaker='all',turn_count=? WHERE id=?",
+                    (turns, meeting_id),
                 )
             db.execute("COMMIT")
         return self.message(cursor.lastrowid), False

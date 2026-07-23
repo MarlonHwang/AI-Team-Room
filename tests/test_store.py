@@ -17,23 +17,25 @@ class StoreTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_bounded_turn_rotation_and_end(self):
-        for index, sender in enumerate(["claude", "codex", "claude", "codex"]):
+    def test_first_speaker_then_open_floor_without_automatic_end(self):
+        for index, sender in enumerate(["claude", "claude", "codex", "codex", "claude"]):
             message, duplicate = self.store.send(
                 self.meeting["id"], sender, "all", "talk", f"turn {index}", f"id-{index}"
             )
             self.assertFalse(duplicate)
             self.assertEqual(message["sender"], sender)
         final = self.store.get(self.meeting["id"])
-        self.assertEqual(final["status"], "ended")
-        self.assertEqual(final["turn_count"], 4)
+        self.assertEqual(final["status"], "active")
+        self.assertEqual(final["next_speaker"], "all")
+        self.assertEqual(final["turn_count"], 5)
+        self.assertEqual(final["max_turns"], 0)
 
-    def test_wrong_speaker_is_rejected_atomically(self):
-        with self.assertRaisesRegex(Conflict, "not codex's turn"):
+    def test_non_opening_speaker_is_rejected_atomically(self):
+        with self.assertRaisesRegex(Conflict, "opening response belongs to claude"):
             self.store.send(self.meeting["id"], "codex", "all", "talk", "jump", "jump-1")
         self.assertEqual(self.store.get(self.meeting["id"])["turn_count"], 0)
 
-    def test_duplicate_client_id_returns_same_message_without_turn(self):
+    def test_duplicate_client_id_returns_same_message_without_increment(self):
         first, duplicate = self.store.send(self.meeting["id"], "claude", "all", "evidence", "checked", "stable-id")
         self.assertFalse(duplicate)
         second, duplicate = self.store.send(self.meeting["id"], "claude", "all", "evidence", "checked", "stable-id")
@@ -41,18 +43,19 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(first["id"], second["id"])
         self.assertEqual(self.store.get(self.meeting["id"])["turn_count"], 1)
 
-    def test_final_turn_retry_is_still_idempotent(self):
+    def test_ended_meeting_retry_is_still_idempotent(self):
         self.store.control(self.meeting["id"], "end")
         second = self.store.create("one turn", ["claude"], "claude", 1)
         first, _ = self.store.send(second["id"], "claude", "all", "talk", "done", "final-id")
+        self.store.control(second["id"], "end")
         retried, duplicate = self.store.send(second["id"], "claude", "all", "talk", "done", "final-id")
         self.assertTrue(duplicate)
         self.assertEqual(first["id"], retried["id"])
 
-    def test_direct_human_message_assigns_floor_without_consuming_turn(self):
+    def test_direct_human_message_does_not_change_opening_speaker(self):
         self.store.send(self.meeting["id"], "human", "codex", "question", "verify this", "human-1")
         current = self.store.get(self.meeting["id"])
-        self.assertEqual(current["next_speaker"], "codex")
+        self.assertEqual(current["next_speaker"], "claude")
         self.assertEqual(current["turn_count"], 0)
 
     def test_broadcast_human_message_preserves_floor(self):
@@ -61,13 +64,14 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(current["next_speaker"], "claude")
         self.assertEqual(current["turn_count"], 0)
 
-    def test_pause_direct_assignment_resume_and_end(self):
+    def test_pause_resume_and_explicit_end(self):
         meeting_id = self.meeting["id"]
+        self.store.send(meeting_id, "claude", "all", "talk", "opening", "open")
         self.assertEqual(self.store.control(meeting_id, "pause")["status"], "paused")
         self.store.send(meeting_id, "human", "codex", "talk", "Codex continues", "paused-human")
         with self.assertRaises(Conflict):
             self.store.send(meeting_id, "claude", "all", "talk", "during pause", "p")
-        self.assertEqual(self.store.control(meeting_id, "resume")["next_speaker"], "codex")
+        self.assertEqual(self.store.control(meeting_id, "resume")["next_speaker"], "all")
         self.assertEqual(self.store.control(meeting_id, "end")["status"], "ended")
         with self.assertRaisesRegex(ValueError, "invalid control action"):
             self.store.control(meeting_id, "pass")

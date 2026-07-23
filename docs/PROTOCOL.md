@@ -7,8 +7,8 @@ AI Team Room uses explicit cooperation because coding tools do not universally e
 1. The human creates a meeting and receives one signed invitation per participant.
 2. The human pastes the invitation instruction into each existing AI session.
 3. The session runs `aitr ... join` and reads the meeting and protocol. The CLI stores the returned cursor locally under a one-way hash of the room URL and participant token.
-4. When named as `next_speaker`, it investigates with its normal tools and permissions.
-5. It sends one concise message with a unique client ID.
+4. The configured first speaker investigates and sends the opening AI response.
+5. The floor then opens to every participant. A participant sends a concise message with a unique client ID when new room activity merits a response.
 6. It calls `wait`; `--after CURSOR` is available only when an explicit override is needed. Each long poll is capped at 30 seconds, and a timeout means “still quiet,” not “meeting ended.”
 7. It repeats until `meeting.status` is `ended`.
 8. If the human explicitly releases it early, it calls `leave` so the room removes its presence immediately.
@@ -19,9 +19,12 @@ AI Team Room uses explicit cooperation because coding tools do not universally e
 - `after` is an exclusive cursor.
 - Participant bearer tokens are HMAC-bound to `meeting` and `participant`.
 - A participant cannot choose a different sender identity.
-- Only `next_speaker` can send an ordinary participant message.
-- The human may speak at any time. A direct message to one participant atomically assigns that participant as `next_speaker`; a broadcast leaves the current floor unchanged.
+- Only the configured first speaker can send the opening participant message.
+- After the opening response, `next_speaker` becomes `all` and participants may send without forced rotation.
+- Participants should not send empty acknowledgements or form automatic reply loops. After contributing, they wait for new room activity.
+- The human may speak at any time and may address one participant or everyone.
 - The human may pause, resume, or end the meeting.
+- Meetings never end because of an AI-message count; only explicit human control ends them.
 - `client_id` is unique for `(meeting, sender)`; retrying it returns the original message.
 - Ending a meeting wakes long-polling clients.
 
