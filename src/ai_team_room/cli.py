@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from . import __version__
 
 PROTOCOL = """You are the already-open work session, not a replacement process. Keep your existing context, tools, workspace, and permission rules. Follow `wait` -> investigate/work -> `send` -> `wait` until the meeting ends; the CLI remembers your cursor after `join`, `wait`, and `send`. Only send an ordinary message when next_speaker equals your participant name. A wait lasts at most 30 seconds, and a timeout is not the end. Use `send --text-file PATH` for long or non-ASCII messages. If the human explicitly releases you before the meeting ends, run `leave` and stop. Never claim a search, file read, test, or experiment unless you performed it in this actual session. Joining does not authorize writes, paid compute, destructive actions, commits, pushes, or broader permissions."""
 
@@ -79,6 +80,7 @@ def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=f"AI Team Room {__version__} — Madoro Studio")
     parser.add_argument("--url", default="http://127.0.0.1:8765")
     parser.add_argument("--token", required=True)
     sub = parser.add_subparsers(dest="command", required=True)

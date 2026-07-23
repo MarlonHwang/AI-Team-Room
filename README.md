@@ -1,5 +1,7 @@
 # AI Team Room
 
+**An open-source project by Madoro Studio.**
+
 [![Tests](https://github.com/MarlonHwang/AI-Team-Room/actions/workflows/test.yml/badge.svg)](https://github.com/MarlonHwang/AI-Team-Room/actions/workflows/test.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-D22128.svg)](LICENSE)

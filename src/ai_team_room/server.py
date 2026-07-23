@@ -16,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PureWindowsPath
 from urllib.parse import parse_qs, urlparse
 
+from . import __version__
 from .auth import TokenSigner, random_token
 from .store import Conflict, RoomStore
 
@@ -333,7 +334,8 @@ def main() -> int:
     origins = {f"http://{args.host}:{args.port}", f"http://localhost:{args.port}", f"http://127.0.0.1:{args.port}"}
     server = ThreadingHTTPServer((args.host, args.port), handler_factory(app, origins))
     url = f"{base_url}/#token={token}"
-    print(f"AI Team Room: {url}")
+    print(f"AI Team Room {__version__} — Madoro Studio")
+    print(f"Control room: {url}")
     print(f"Data: {directory}")
     if not args.no_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
